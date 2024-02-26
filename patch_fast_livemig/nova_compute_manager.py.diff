@@ -1,0 +1,77 @@
+--- compute/manager.py.bak	2021-10-29 21:25:34.629449463 +0900
++++ compute/manager.py	2021-11-02 12:35:33.003126282 +0900
+@@ -1263,7 +1263,9 @@
+             # entered post-copy mode.
+             virtevent.EVENT_LIFECYCLE_POSTCOPY_STARTED: 'running (post-copy)',
+             # Suspended for offline migration.
+-            virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED: 'running'
++            virtevent.EVENT_LIFECYCLE_MIGRATION_COMPLETED: 'running', 
++            #virtevent.EVENT_LIFECYCLE_PAUSED: 'running',
++            virtevent.EVENT_LIFECYCLE_STARTED: 'running',
+         }
+ 
+         expected_attrs = []
+@@ -1301,14 +1303,30 @@
+         # TODO(danms): Explore options for using a different live migration
+         # specific callback for this instead of piggy-backing on the
+         # handle_lifecycle_event callback.
++        LOG.info("[seyeon] instance's task state: %s, lifecycle transition why: %s", instance.task_state, event.get_name())
+         if (instance.task_state == task_states.MIGRATING and
+                 event_transition in migrate_finish_statuses):
+             status = migrate_finish_statuses[event_transition]
+             try:
+                 migration = objects.Migration.get_by_instance_and_status(
+                             context, instance.uuid, status)
+-                LOG.debug('Binding ports to destination host: %s',
+-                          migration.dest_compute, instance=instance)
++
++                # seyeon modified for early call to migrate_instance_start to reduce network downtime, instead of calling it in _post_live_migration  
++                # migrate_instance_start() requires the parameter migration of dict with 'source_compute': the name of source compute and 'dest_compute': the name of dest compute
++                # see migrate_instance_start:nova.network.neutron.py
++                migration = {
++                             #'source_compute': self.host,
++                             'source_compute': migration.source_compute,
++                             'dest_compute': migration.dest_compute
++                            }
++                # 5s buffer for stable start
++                #time.sleep(7)
++
++                #LOG.debug('Binding ports to destination host: %s',
++                #          migration.dest_compute, instance=instance)
++                LOG.info('[handle_life_cycle_event] Binding ports to destination host: %s (originally bound to %s)',
++                          migration['dest_compute'], migration['source_compute'], instance=instance)
++
+                 # For neutron, migrate_instance_start will activate the
+                 # destination host port bindings, if there are any created by
+                 # conductor before live migration started.
+@@ -8439,7 +8457,8 @@
+         rollback_live_migration = functools.partial(
+             self._rollback_live_migration, source_bdms=source_bdms)
+ 
+-        LOG.debug('live_migration data is %s', migrate_data)
++        #LOG.debug('live_migration data is %s', migrate_data)
++        LOG.info('live_migration data is %s', migrate_data)
+         try:
+             self.driver.live_migration(context, instance, dest,
+                                        post_live_migration,
+@@ -8734,12 +8753,17 @@
+ 
+         migration = {'source_compute': self.host,
+                      'dest_compute': dest, }
++        LOG.info('[_post_live_migration] Binding ports to destination host: %s',
++                          migration['dest_compute'], instance=instance)
+         # For neutron, migrate_instance_start will activate the destination
+         # host port bindings, if there are any created by conductor before live
+         # migration started.
+-        self.network_api.migrate_instance_start(ctxt,
+-                                                instance,
+-                                                migration)
++        # Seyeon modified. 
++        # migrate_instance_start() had been executed so the port binding to dst VM's vif is already done right after the source VM's lifecycle change to PAUSED
++        # so don't need to execute this function here agian. see handle_lifecycle_event()
++        #self.network_api.migrate_instance_start(ctxt,
++        #                                        instance,
++        #                                        migration)
+ 
+         destroy_vifs = False
+         try:

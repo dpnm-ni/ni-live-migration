@@ -1,0 +1,111 @@
+---
+swagger: "2.0"
+info:
+  description: "NI Migration Module for the NI project."
+  version: "1.0.0"
+  title: "NI Migration Module"
+tags:
+- name: "ni_migration_module"
+  description: "Perform management decisions using ML algorithms."
+schemes:
+- "https"
+- "http"
+paths:
+  /test_live_migration_downtime:
+    get:
+      tags:
+      - "Migration APIs"
+      summary: "testing shared live migration downtime"
+      operationId: "test_live_migration_downtime"
+      produces:
+      - "application/json"
+      parameters: []
+      responses:
+        "200":
+          description: "Success."
+          schema:
+            type: "string"
+      x-swagger-router-controller: "server.controllers.default_controller"
+  /predict_migration_downtime:
+    get:
+      tags:
+      - "Migration APIs"
+      summary: "predict migration downtime using AI model"
+      operationId: "predict_migration_downtime"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "trained"
+        in: "query"
+        description: "trained status"
+        required: false
+        type: "boolean"
+      responses:
+        "200":
+          description: "Success."
+          schema:
+            type: "string"
+      x-swagger-router-controller: "server.controllers.default_controller"
+  /do_migration:
+    post:
+      tags:
+      - "Migration APIs"
+      summary: "do migration"
+      operationId: "do_migration"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "vnf"
+        in: "query"
+        description: "The id of target vnf"
+        required: true
+        type: "string"
+      - name: "node"
+        in: "query"
+        description: "The id of target node"
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "Success."
+          schema:
+            type: "string"
+      x-swagger-router-controller: "server.controllers.default_controller"
+  /auto_migration:
+    post:
+      tags:
+      - "Migration APIs"
+      summary: "auto_migration"
+      operationId: "auto_migration"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "vnf"
+        in: "query"
+        description: "The id of target vnf"
+        required: true
+        type: "string"
+      responses:
+        "200":
+          description: "Success."
+          schema:
+            type: "string"
+      x-swagger-router-controller: "server.controllers.default_controller"
+  /get_busy_vnfs:
+    get:
+      tags:
+      - "Migration APIs"
+      summary: "check busy VNFs from openstack and migration module"
+      operationId: "get_busy_vnfs"
+      produces:
+      - "application/json"
+      parameters: []
+      responses:
+        "200":
+          description: "Success."
+          schema:
+            type: "array"
+      x-swagger-router-controller: "server.controllers.default_controller"
+externalDocs:
+  description: "Find out more about DPNM NI."
+  url: "http://dpnm.postech.ac.kr/"
